@@ -30,13 +30,11 @@ db = client["vikal"]
 chat_history = db["chat_history"]
 exam_dates = db["exam_dates"]
 users = db["users"]
+logger.info("MongoDB connected successfully")
 
-# OpenAI
+# OpenAI with Placeholder
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    logger.error("OPENAI_API_KEY not set")
-    raise ValueError("OPENAI_API_KEY environment variable is missing")
+OPENAI_API_KEY = "sk-placeholder-replace-me"  # Dummy key - replace with real one later
 logger.info(f"Using OpenAI API Key: {OPENAI_API_KEY[:5]}...")
 
 def call_openai(prompt, max_tokens=700, model="gpt-3.5-turbo"):
