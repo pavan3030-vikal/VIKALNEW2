@@ -4,7 +4,7 @@ import os
 import logging
 import requests
 import re
-from prompts import get_prompt  # Importing from prompts.py
+from prompts import get_prompt
 from pymongo import MongoClient
 from datetime import datetime
 
@@ -12,7 +12,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-# Enhanced CORS configuration
 CORS(app, resources={
     r"/*": {
         "origins": "https://vikal-new-production.up.railway.app",
@@ -21,7 +20,7 @@ CORS(app, resources={
     }
 })
 
-# Railway MongoDB
+# MongoDB (Already set via Railway)
 mongo_uri = os.getenv("MONGO_URL")
 if not mongo_uri:
     logger.error("MONGO_URL not set")
@@ -32,23 +31,24 @@ chat_history = db["chat_history"]
 exam_dates = db["exam_dates"]
 users = db["users"]
 
-# OpenAI Configuration (Hardcoded Key)
+# OpenAI Configuration
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    logger.error("OPENAI_API_KEY not set")
+    raise ValueError("OPENAI_API_KEY environment variable is missing")
+logger.info(f"Using OpenAI API Key: {OPENAI_API_KEY[:5]}...")
 
 def call_openai(prompt, max_tokens=700, model="gpt-3.5-turbo"):
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": max_tokens
-    }
+    payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
     try:
+        logger.info(f"Sending request to OpenAI: {payload}")
         response = requests.post(OPENAI_API_URL, json=payload, headers=headers)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except requests.RequestException as e:
-        logger.error(f"OpenAI API error: {e}")
+        logger.error(f"OpenAI API error: {e} - Response: {e.response.text if e.response else 'No response'}")
         raise Exception(f"Failed to generate response: {e}")
 
 @app.route('/')
@@ -58,7 +58,7 @@ def home():
 @app.route('/test-mongo', methods=['GET'])
 def test_mongo():
     try:
-        client.server_info()  # Test connection
+        client.server_info()
         return jsonify({"message": "MongoDB connected successfully"}), 200
     except Exception as e:
         logger.error(f"MongoDB connection failed: {e}")
@@ -67,7 +67,6 @@ def test_mongo():
 @app.route('/explain', methods=['POST', 'OPTIONS'])
 def explain():
     if request.method == "OPTIONS":
-        # Handle preflight request manually if needed
         return jsonify({"status": "ok"}), 200
 
     data = request.get_json()
