@@ -4,9 +4,13 @@ import os
 import logging
 import requests
 import re
-from prompts import get_prompt
+from prompts import get_prompt  # Assuming this is a separate file you have
 from pymongo import MongoClient
 from datetime import datetime
+from dotenv import load_dotenv  # Import python-dotenv
+
+# Load .env file for local development
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,23 +36,27 @@ exam_dates = db["exam_dates"]
 users = db["users"]
 logger.info("MongoDB connected successfully")
 
-# OpenAI with Placeholder
+# OpenAI API Setup
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_API_KEY = "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"  # Replace with real key later
-logger.info(f"Using OpenAI API Key: {OPENAI_API_KEY[:5]}...")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    logger.error("OPENAI_API_KEY not set")
+    raise ValueError("OPENAI_API_KEY environment variable is required")
+logger.info("OpenAI API configured successfully")
 
 def call_openai(prompt, max_tokens=700, model="gpt-3.5-turbo"):
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
     payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
     try:
-        logger.info(f"Sending request to OpenAI: {payload}")
+        logger.info(f"Sending request to OpenAI with model {model}")
         response = requests.post(OPENAI_API_URL, json=payload, headers=headers)
         logger.info(f"OpenAI response status: {response.status_code}")
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except requests.RequestException as e:
-        logger.error(f"OpenAI API error: {e} - Response: {e.response.text if e.response else 'No response'}")
-        raise Exception(f"Failed to generate response: {e}")
+        error_msg = f"OpenAI API error: {e} - Response: {e.response.text if e.response else 'No response'}"
+        logger.error(error_msg)
+        raise Exception(error_msg)
 
 @app.route('/')
 def home():
@@ -102,7 +110,7 @@ def explain():
 
         logger.info("Generating prompt")
         prompt = get_prompt(category, "explanation", style, topic)
-        logger.info(f"Prompt: {prompt[:100]}...")  # Truncate for brevity
+        logger.info(f"Prompt: {prompt[:100]}...")
         response = call_openai(prompt, max_tokens=700)
         logger.info(f"OpenAI response: {response[:100]}...")
 
