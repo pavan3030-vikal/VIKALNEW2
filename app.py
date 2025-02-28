@@ -34,7 +34,7 @@ logger.info("MongoDB connected successfully")
 
 # OpenAI with Placeholder
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_API_KEY = "sk-placeholder-replace-me"  # Dummy key - replace with real one later
+OPENAI_API_KEY = "sk-placeholder-replace-me"  # Replace with real key later
 logger.info(f"Using OpenAI API Key: {OPENAI_API_KEY[:5]}...")
 
 def call_openai(prompt, max_tokens=700, model="gpt-3.5-turbo"):
@@ -43,6 +43,7 @@ def call_openai(prompt, max_tokens=700, model="gpt-3.5-turbo"):
     try:
         logger.info(f"Sending request to OpenAI: {payload}")
         response = requests.post(OPENAI_API_URL, json=payload, headers=headers)
+        logger.info(f"OpenAI response status: {response.status_code}")
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except requests.RequestException as e:
@@ -65,20 +66,26 @@ def test_mongo():
 @app.route('/explain', methods=['POST', 'OPTIONS'])
 def explain():
     if request.method == "OPTIONS":
+        logger.info("Handling OPTIONS preflight")
         return jsonify({"status": "ok"}), 200
 
     data = request.get_json()
+    logger.info(f"Received data: {data}")
     if not data or 'topic' not in data:
+        logger.error("No topic provided in request")
         return jsonify({'error': 'No topic provided'}), 400
 
     user_id = data.get('user_id', 'anonymous')
     topic = data['topic']
     style = data.get('explanation_style', 'teacher')
     category = data.get('category', 'generic')
+    logger.info(f"Processing: user_id={user_id}, topic={topic}, style={style}, category={category}")
 
     try:
+        logger.info(f"Fetching user: {user_id}")
         user = users.find_one({"_id": user_id})
         if not user:
+            logger.info(f"Creating new user: {user_id}")
             users.insert_one({
                 "_id": user_id,
                 "email": data.get("email", "unknown"),
@@ -87,15 +94,21 @@ def explain():
                 "createdAt": datetime.utcnow()
             })
             user = users.find_one({"_id": user_id})
+        logger.info(f"User found: {user}")
 
         if not user["isPro"] and user["chatCount"] >= 3:
+            logger.warning(f"User {user_id} hit chat limit")
             return jsonify({"error": "Chat limit reached. Upgrade to Pro for unlimited chats!"}), 403
 
+        logger.info("Generating prompt")
         prompt = get_prompt(category, "explanation", style, topic)
+        logger.info(f"Prompt: {prompt[:100]}...")  # Truncate for brevity
         response = call_openai(prompt, max_tokens=700)
+        logger.info(f"OpenAI response: {response[:100]}...")
 
         parts = re.split(r'###\s', response)
         parts = [part.strip() for part in parts if part.strip()]
+        logger.info(f"Response parts: {len(parts)}")
 
         notes = ""
         flashcards = []
@@ -122,12 +135,13 @@ def explain():
                 resources = part.replace("Resources", "").strip().split("\n")[:3]
                 resources = [{"title": r.split(" - ")[0].strip(), "url": r.split(" - ")[1].strip() if " - " in r else r.strip()} 
                             for r in resources if r.strip()]
-
-        notes = notes.strip()
+        logger.info(f"Parsed: notes={len(notes)}, flashcards={len(flashcards)}, resources={len(resources)}")
 
         if not user["isPro"]:
+            logger.info(f"Updating chat count for user {user_id}")
             users.update_one({"_id": user_id}, {"$inc": {"chatCount": 1}})
 
+        logger.info(f"Inserting into chat_history: {topic}")
         chat_history.insert_one({
             "user_id": user_id,
             "question": topic,
@@ -137,6 +151,7 @@ def explain():
             "timestamp": datetime.utcnow()
         })
 
+        logger.info("Returning response")
         return jsonify({
             "notes": notes,
             "flashcards": flashcards,
