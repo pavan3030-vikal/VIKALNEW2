@@ -1,19 +1,25 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os
 import logging
 import requests
-import os
-from pymongo import MongoClient
-from datetime import datetime
 import re
 from prompts import get_prompt  # Importing from prompts.py
+from pymongo import MongoClient
+from datetime import datetime
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app, origins=["https://vikal-new-production.up.railway.app"], methods=["GET", "POST", "OPTIONS"])
+# Enhanced CORS configuration
+CORS(app, resources={
+    r"/*": {
+        "origins": "https://vikal-new-production.up.railway.app",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Railway MongoDB
 mongo_uri = os.getenv("MONGO_URL")
@@ -26,7 +32,7 @@ chat_history = db["chat_history"]
 exam_dates = db["exam_dates"]
 users = db["users"]
 
-# OpenAI setup with hardcoded key
+# OpenAI Configuration (Hardcoded Key)
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_API_KEY = "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"
 
@@ -58,16 +64,20 @@ def test_mongo():
         logger.error(f"MongoDB connection failed: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/explain', methods=['POST'])
+@app.route('/explain', methods=['POST', 'OPTIONS'])
 def explain():
+    if request.method == "OPTIONS":
+        # Handle preflight request manually if needed
+        return jsonify({"status": "ok"}), 200
+
     data = request.get_json()
     if not data or 'topic' not in data:
         return jsonify({'error': 'No topic provided'}), 400
 
     user_id = data.get('user_id', 'anonymous')
     topic = data['topic']
-    style = data.get('explanation_style', 'teacher')  # Default to 'teacher'
-    category = data.get('category', 'generic')       # Default to 'generic'
+    style = data.get('explanation_style', 'teacher')
+    category = data.get('category', 'generic')
 
     try:
         user = users.find_one({"_id": user_id})
