@@ -34,7 +34,7 @@ logger.info("MongoDB connected successfully")
 
 # OpenAI with Placeholder
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_API_KEY = "sk-placeholder-replace-me"  # Replace with real key later
+OPENAI_API_KEY = "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"  # Replace with real key later
 logger.info(f"Using OpenAI API Key: {OPENAI_API_KEY[:5]}...")
 
 def call_openai(prompt, max_tokens=700, model="gpt-3.5-turbo"):
