@@ -20,7 +20,7 @@ CORS(app, resources={
     }
 })
 
-# MongoDB (Already set via Railway)
+# MongoDB
 mongo_uri = os.getenv("MONGO_URL")
 if not mongo_uri:
     logger.error("MONGO_URL not set")
@@ -31,7 +31,7 @@ chat_history = db["chat_history"]
 exam_dates = db["exam_dates"]
 users = db["users"]
 
-# OpenAI Configuration
+# OpenAI
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
