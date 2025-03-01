@@ -8,25 +8,24 @@ from prompts import get_prompt
 from pymongo import MongoClient
 from datetime import datetime
 from dotenv import load_dotenv
-from youtube_transcript_api import YouTubeTranscriptApi  # Added for YouTube endpoints
+from youtube_transcript_api import YouTubeTranscriptApi
 
-# Load environment variables from .env file
 load_dotenv()
-
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+# Updated CORS configuration
 CORS(app, resources={
     r"/*": {
-        "origins": "https://vikalnew-production.up.railway.app/",
+        "origins": ["https://vikal-new-production.up.railway.app", "http://localhost:3000"],  # Add your frontend origins
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "support_credentials": False
     }
 })
 
-# MongoDB setup
 mongo_uri = os.getenv("MONGO_URL")
 if not mongo_uri:
     logger.error("MONGO_URL not set")
@@ -38,7 +37,6 @@ exam_dates = db["exam_dates"]
 users = db["users"]
 logger.info("MongoDB connected successfully")
 
-# OpenAI API setup
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
