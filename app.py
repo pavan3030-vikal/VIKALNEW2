@@ -18,7 +18,7 @@ app = Flask(__name__)
 # Updated CORS configuration
 CORS(app, resources={
     r"/*": {
-        "origins": ["https://vikal-new-production.up.railway.app", "http://localhost:3000"],  # Add your frontend origins
+        "origins": ["https://vikal-new-production.up.railway.app", "http://localhost:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "expose_headers": ["Content-Type"],
@@ -86,7 +86,7 @@ def test_mongo():
 @app.route('/explain', methods=['POST', 'OPTIONS'])
 def explain():
     if request.method == "OPTIONS":
-        logger.info("Handling OPTIONS preflight")
+        logger.info("Handling OPTIONS preflight for /explain")
         return jsonify({"status": "ok"}), 200
     data = request.get_json()
     if not data or 'topic' not in data:
@@ -100,8 +100,11 @@ def explain():
     logger.info(f"Processing: user_id={user_id}, topic={topic}, style={style}, category={category}")
     return process_request(user_id, "explain", get_prompt(category, "explanation", style, topic), 700, topic, category, style, parse_explain_response)
 
-@app.route('/solve', methods=['POST'])
+@app.route('/solve', methods=['POST', 'OPTIONS'])
 def solve():
+    if request.method == "OPTIONS":
+        logger.info("Handling OPTIONS preflight for /solve")
+        return jsonify({"status": "ok"}), 200
     data = request.get_json()
     if not data or 'problem' not in data:
         logger.error("No problem provided in request")
@@ -120,8 +123,11 @@ def solve():
     max_tokens = {"smart": 75, "step": 150, "teacher": 150, "research": 225}.get(style.lower(), 150)
     return process_request(user_id, "solve", get_prompt(category, "solution", style, data['problem']), max_tokens, data['problem'], category, style, parse_solve_response)
 
-@app.route('/summarize-youtube', methods=['POST'])
+@app.route('/summarize-youtube', methods=['POST', 'OPTIONS'])
 def summarize_youtube():
+    if request.method == "OPTIONS":
+        logger.info("Handling OPTIONS preflight for /summarize-youtube")
+        return jsonify({"status": "ok"}), 200
     data = request.get_json()
     video_url = data.get('videoUrl')
     user_id = data.get('user_id', 'anonymous')
@@ -206,8 +212,11 @@ Please ensure that the summary, bullet points, and explanations fit within the 3
         logger.error(f"Error summarizing YouTube video: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/chat-youtube', methods=['POST'])
+@app.route('/chat-youtube', methods=['POST', 'OPTIONS'])
 def chat_youtube():
+    if request.method == "OPTIONS":
+        logger.info("Handling OPTIONS preflight for /chat-youtube")
+        return jsonify({"status": "ok"}), 200
     data = request.get_json()
     video_id = data.get('video_id')
     user_query = data.get('query')
